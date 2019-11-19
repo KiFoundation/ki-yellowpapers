@@ -17,9 +17,9 @@ This yellow paper explains the details of the dynamic reward scheme used within 
 This yellow paper describes a set of techniques that can help assess the degree of decentralization of a given blockchain using a data driven approach. The proposed techniques aim at capture different aspect of the decentralization such as the temporal power concentration.
 
 - KIYP3 : _"The Proof of Reputation Protocol"_
-This yellow paper details the theoretical and technical specifications of the Proof of Reputation Protocol PoR in its different aspects, mainly: the behavioural reputation, the staking reputation and the validator selection
+This yellow paper details the theoretical and technical specifications of the Proof of Reputation Protocol PoR in its different aspects, mainly: the behavioural reputation, the staking reputation and the validator selection.
 
-## Compile the whitepaper from latex sources
+## Compile the yellow papers from latex sources
 To complie the latex source files, start by cloning the repository using :
 
 ```

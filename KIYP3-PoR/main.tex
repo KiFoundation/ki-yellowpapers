@@ -1,9 +1,8 @@
-% \documentclass[conference]{IEEEtran}
 \documentclass[]{article}
 \usepackage[left=3.8cm, right=3.8cm, top=2.50cm, bottom=2.50cm]{geometry}
-% ß\IEEEoverridecommandlockouts
 \usepackage{lipsum}
-\usepackage{todonotes}
+% \usepackage{todonotes}
+\usepackage[disable]{todonotes}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -14,6 +13,7 @@
 \usepackage{multirow}
 
 \usepackage[utf8]{inputenc}
+
 \setuptodonotes{size=tiny, color=blue!30}
 
 \title{The Proof of Reputation Protocol \small{draft}}
@@ -177,6 +177,7 @@ When the reputation of each node is computed and aged, it needs to be disseminat
     \item Behavior collection: this is a continuous task. The behavior accounted for in the epoch t are collected during epoch t-1 and t-2 during K rounds.
     \item Reputation calculation: Each node computes its own reputation similar to the distributed EigenTrust.
     \item Each node broadcasts its reputation in a specific type of transactions. These reputation transactions are validated by the validator list like any other transactions.
+    \item A node that does not broadcast its reputation score during the dissemination period misses its chance to be part in the election process of the next round.
 \end{itemize}
 
 The calculation, dissemination and validation occurs in a time window of size $q$ preceding the next epoch.
@@ -347,7 +348,7 @@ S, 60, t9 = 25/12/2019 & [(0, t0), (0, t1), (35, t3), (20, t4), (40, t7), (50, t
 \label{tab:stakeex}
 \end{table}
 
-Since it can be easy to flood the database with micro stakes we define 3 rules for the staking. First, a minimum stake amount is required. Second, fees on staking applies starting the second stake per day. Finally, the staking events of are compressed on a daily basis. This means that all the staking actions are aggregated in one day and than committed to the database daily. On the other hand, unstaking events take effect immediately \footnote{ To simulate the staking and unstaking events and the stake vector computation, an online tool has been created and made public on \url{http://test-stake.project-crowd.eu/}.}. If one applies this third rule on $Alices$ events, her final staking vector will be equal to: 
+Since it can be easy to flood the database with micro stakes we define 3 rules for the staking. First, a minimum stake amount is required. Second, fees on staking applies starting the second stake per day. Finally, the staking events of are compressed on a daily basis. This means that all the staking actions are aggregated in one day and than committed to the database daily. On the other hand, unstaking events take effect immediately \footnote{ To simulate the staking and unstaking events and the stake vector computation, an online tool has been created and made public on \url{https://static.foundation.ki/blockchain/stake-demo/index.html}.}. If one applies this third rule on $Alices$ events, her final staking vector will be equal to: 
 
 \begin{lstlisting}[frame=single,  basicstyle=\small]
 [(55, 22/10/2019),(40,16/11/2019),(50, 10/12/2019),(60, 25/12/2019)]
@@ -355,34 +356,30 @@ Since it can be easy to flood the database with micro stakes we define 3 rules f
 This vector serves as an input for the stake reputation function shown in Equation~\ref{eq:stakeFinal}.
 
 \subsubsection{Role switching}
-From a staking perspective, a wallet can switch from being a normal voter to an owner wallet (i.e., indirectly possessing a validator stake weight) and vice versa. Indeed, since the type of the wallet impacts its stake weight (See Equation~\ref{eq:stakewalletTypeweight}), it is important to define rules to0 account for these transitions. On one hand, one can reset the age of the token to 0 when the wallet type changes. On the other hand, one can perform a detailed computation of the stake by taking into account the weight of the stake according to the wallet type at the staking date. The former solution is extremely unfair as it completely deprives the wallet from their age. The latter, while optimally fair, is costly from a computation point of view. In the Ki blockchain, we chose a practical and faire trade-off between these 2 possibilities. In fact, as long as the stake is continuous (i.e., the wallet did not unstake during the transition), its age - in time units - is conserved in its totality. Its weight in the  staking reputation of the validator they own or vote for, is computed w.r.t. the current state of the wallet (i.e., whether it is a voter or an owner at the moment of computation). For the purpose of comparison, Appendix~\ref{app:rs} provides an example where the three solutions are detailed.
+From a staking perspective, a wallet can switch from being a normal voter to an owner wallet (i.e., indirectly possessing a validator stake weight) and vice versa. Indeed, since the type of the wallet impacts its stake weight (See Equation~\ref{eq:stakewalletTypeweight}), it is important to define rules to0 account for these transitions. On one hand, one can reset the age of the token to 0 when the wallet type changes. On the other hand, one can perform a detailed computation of the stake by taking into account the weight of the stake according to the wallet type at the staking date. The former solution is extremely unfair as it completely deprives the wallet from their age. The latter, while optimally fair, is costly from a computation point of view. In the Ki blockchain, we chose a practical and faire trade-off between these 2 possibilities. In fact, as long as the stake is continuous (i.e., the wallet did not unstake during the transition), its age - in time units - is conserved in its totality. Its weight in the  staking reputation of the validator they own or vote for, is computed w.r.t. the current state of the wallet (i.e., whether it is a voter or an owner at the moment of computation). For the purpose of comparison, an example where the three solutions are detailed can be found in the followinf url: \url{https://github.com/KiFoundation/ki-yellowpapers/blob/master/KIYP3-PoR/Figures/roleswitch.svg}.
 
 \section{Validator list selection}
-Splitting the pool of validators into eligible and non eligible validators is performed based on a combined criteria:
-A percentage of the whole pool (to enable automatic epoch adaptation)
-A minimum reputation criteria (to ensure the security of the consensus process)
+As mentioned in Section \ref{sec:overview}, at each reputation round the reputation of the validators is updated. This means that the behavioural reputations, $B_n$, is recalculated based on the last observations of the nodes and the stake reputations, $S_n$, are recalculated based on the latest staking, unstaking and voting events. $B_n$ and $S_n$ are then aggregated using a linear combination to yield the eligibility scores $R_n$ as shown in Equation~\ref{eq:aggregation}. 
 
-We use a verifiable random function (VRF) similar to the one used in the committee election step of ALGORAND. We start by a fast explanation of this VRF process: 
-Each node is characterized by an interval [0, P] relative to its reputation score in the system.
-Each node has a private (K) and public (pK) key related to the VRF computation.
-At each round a random seed (Q) is disseminated on the network.
-Each node computed the VRF(K, Q) to get (V, proofV)
-V is the unique output for each input couple (K, Q). ProofV allows everyone to verify the correctness of the VRF computation using the pK of the correspondent node.
-A node participates in the next round of validation if and only if V belongs to [0, P].
+\begin{equation}
+\label{eq:aggregation}
+    R_n = \omega_S \times S_n + \omega_B \times B_n
+\end{equation}
+where $\omega_S$ and $\omega_B$ are the weights of the staking and reputation score respectively. The values of these weights are discussed further in this document. Obviously, a lower reputation score reflects the unreliability of a node and its lack of commitment. Nodes with lower scores are not allowed to participate to validation as they represent a security risk. Therefore we split the pool of validators into eligible and non eligible validators based on a given threshold $\rho$. Among the eligible node a distributed and secure random selection process is performed at each validation round to select the list of validators for that round. 
+
+The random selection process relies on a Verifiable Random Function (VRF) computation. In a nutshell, a VRF \cite{micali1999verifiable,dodis2005verifiable} is a function that allows a party to compute the hash of a given value and to produce, using their private key, a cryptographic proof that can be used by other parties to verify the correctness of this computation using the public key of the proof generating party. The selection process can be summarized as follows: each node $n$ is characterized by an interval $[0, P_n]$ relative to its reputation score in the system. Each node $n$ has also a private key $K_n$ and public key $pK_n$ dedicated to the Verifiable Random Function (VRF) computation. At each round a random seed $Q$ is disseminated on the network (e.g., last block hash). Each node computes the $VRF(K_n, Q)$ which yields a couple $(V_n, proofV_n)$ where $V_n$ is the unique possible output of the VRF for each input couple $(K_n, Q)$. $ProofV_n$ allows everyone to verify the correctness of the $V_n$ using the $pK_n$ of the correspondent node. Finally, a node participates in the next round of validation if and only if $V_n$ belongs to $[0, P_n]$. The larger the interval is, the more reliable a node is and the higher their chances of being selected are. \todo{How to be restrict the number of selected nodes}
 
 \section{Reputation epochs}
-\label{sec:epoch}
-Reputation epochs allows to adapt the configuration of the reputation system to the evolution of the blockchain validation activity i.e. number of validators, the distribution of their reputation values, ...
-The reputation epochs are defined through the governance process, they encompass: the size of the eligible pool, the minimum eligibility reputation, the size of the round validator list, the weights of the global reputation formula (stake, behavior), the weights of the stake reputation components (owner/voter stakes)
-Study the collusion possibilities w.r.t. the size of the pool, the size of the eligible set and the size of the round list. 
+\label{sec:epochs}
+Reputation epochs allows to adapt the configuration of the reputation system to the evolution of the blockchain validation activity i.e. number of validators, the distribution of their reputation values, ... The epoch duration and configurations are defined through the governance process, they encompass: the size of the eligible pool, the minimum eligibility reputation, the size of the round validator list, the weights of the global reputation formula (stake, behavior), the weights of the stake reputation components (owner/voter stakes).
 
-\section{Conclusion}
+\section{Summary}
 \label{sec:conclusion}
+In the document we described the Proof of Reputation consensus protocol. In order to ensure the reliability of the nodes, the PoR protocol leverages both, the trust of these nodes measured by their behavioural features and their staking reputation measured by the aggregate of their aged stake and the aged stake of their voters. This compound commitment score guarantees the security of the validation process as only technically reliable nodes are selected. Moreover the proposed random validator selection mechanism ensures a high level of decentralization as reliable nodes can be selected regardless how wealthy they. 
+
+
 
 \bibliographystyle{unsrt}
 \bibliography{biblio}
 
-\appendix
-\section{Role switching}
-\label{app:rs}
 \end{document}
